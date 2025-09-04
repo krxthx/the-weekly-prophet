@@ -5,6 +5,7 @@ import Header from '@/components/header';
 import WeekNavigation from '@/components/weekly/week-navigation';
 import ViewToggle from '@/components/weekly/view-toggle';
 import WeeklyContent from '@/components/weekly/weekly-content';
+import ProtectedRoute from '@/components/protected-route';
 
 type ViewMode = 'notes' | 'tasks' | 'both';
 
@@ -25,23 +26,25 @@ export default function WeeklyPage() {
   };
 
   return (
-    <div className="min-h-screen bg-app">
-      <Header />
-      
-      <div className="max-w-7xl mx-auto px-8 py-12">
-        <WeekNavigation 
-          currentWeek={currentWeek}
-          onPreviousWeek={handlePreviousWeek}
-          onNextWeek={handleNextWeek}
-        />
+    <ProtectedRoute>
+      <div className="min-h-screen bg-app">
+        <Header />
         
-        <ViewToggle 
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
-        
-        <WeeklyContent viewMode={viewMode} />
+        <div className="max-w-7xl mx-auto px-8 py-12">
+          <WeekNavigation 
+            currentWeek={currentWeek}
+            onPreviousWeek={handlePreviousWeek}
+            onNextWeek={handleNextWeek}
+          />
+          
+          <ViewToggle 
+            viewMode={viewMode}
+            onViewModeChange={setViewMode}
+          />
+          
+          <WeeklyContent viewMode={viewMode} currentWeek={currentWeek} />
+        </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

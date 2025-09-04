@@ -1,80 +1,124 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Header from '@/components/header';
 import DailyStatusCard from '@/components/dashboard/daily-status-card';
 import MonthlyStatsCard from '@/components/dashboard/monthly-stats-card';
 import WorkSummaryCard from '@/components/dashboard/work-summary-card';
 import TodoSidebar from '@/components/dashboard/todo-sidebar';
+import ProtectedRoute from '@/components/protected-route';
+import { useAuth } from '@/contexts/auth-context';
+import { 
+  addTodo, 
+  updateTodo, 
+  deleteTodo as deleteTodoFromFirestore, 
+  getTodosForDate 
+} from '@/lib/firestore';
 
 interface Todo {
-  id: number;
+  id: string;
   text: string;
   completed: boolean;
 }
 
 export default function DashboardPage() {
-  const today = new Date();
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
+  const { user } = useAuth();
+  
+  const today = useMemo(() => new Date(), []);
+  const yesterday = useMemo(() => {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return date;
+  }, []);
   
   const currentMonth = today.toLocaleDateString('en-US', { month: 'long' });
 
-  // Work summary state
-  const [todayUpdate, setTodayUpdate] = useState('');
-
-  // TODO state
+  // State
   const [newTodayTodo, setNewTodayTodo] = useState('');
-  const [editingTodo, setEditingTodo] = useState<number | null>(null);
+  const [editingTodo, setEditingTodo] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
+  const [yesterdayTodos, setYesterdayTodos] = useState<Todo[]>([]);
+  const [todayTodos, setTodayTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock data
-  const [yesterdayTodos] = useState<Todo[]>([
-    { id: 1, text: 'Finish user research analysis', completed: true },
-    { id: 2, text: 'Prepare wireframes', completed: true },
-    { id: 3, text: 'Client feedback review', completed: false },
-    { id: 4, text: 'Update project timeline', completed: true },
-    { id: 5, text: 'Team meeting prep', completed: false }
-  ]);
+  // Load data on component mount
+  useEffect(() => {
+    const loadTodos = async () => {
+      if (!user) return;
+      
+      try {
+        setLoading(true);
+        const [yesterdayData, todayData] = await Promise.all([
+          getTodosForDate(user.uid, yesterday),
+          getTodosForDate(user.uid, today)
+        ]);
+        
+        setYesterdayTodos(yesterdayData);
+        setTodayTodos(todayData);
+      } catch (error) {
+        console.error('Error loading todos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const [todayTodos, setTodayTodos] = useState<Todo[]>([
-    { id: 6, text: 'Review project proposal', completed: false },
-    { id: 7, text: 'Team meeting prep', completed: true },
-    { id: 8, text: 'Client feedback review', completed: false },
-    { id: 9, text: 'Update documentation', completed: false }
-  ]);
+    if (user) {
+      loadTodos();
+    }
+  }, [user, yesterday, today]);
 
   // TODO functions
-  const addTodayTodo = () => {
-    if (newTodayTodo.trim()) {
-      setTodayTodos([...todayTodos, {
-        id: Date.now(),
+  const addTodayTodo = async () => {
+    if (!newTodayTodo.trim() || !user) return;
+    
+    try {
+      const todoId = await addTodo(user.uid, today, newTodayTodo.trim());
+      const newTodo: Todo = {
+        id: todoId,
         text: newTodayTodo.trim(),
         completed: false
-      }]);
+      };
+      setTodayTodos([...todayTodos, newTodo]);
       setNewTodayTodo('');
+    } catch (error) {
+      console.error('Error adding todo:', error);
     }
   };
 
-  const toggleTodayTodo = (id: number) => {
-    setTodayTodos(todayTodos.map(todo => 
-      todo.id === id ? { ...todo, completed: !todo.completed } : todo
-    ));
+  const toggleTodayTodo = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const todo = todayTodos.find(t => t.id === id);
+      if (!todo) return;
+      
+      await updateTodo(user.uid, id, { completed: !todo.completed });
+      setTodayTodos(todayTodos.map(todo => 
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      ));
+    } catch (error) {
+      console.error('Error toggling todo:', error);
+    }
   };
 
-  const startEditing = (id: number, text: string) => {
+  const startEditing = (id: string, text: string) => {
     setEditingTodo(id);
     setEditText(text);
   };
 
-  const saveEdit = (id: number) => {
-    if (editText.trim()) {
+  const saveEdit = async (id: string) => {
+    if (!editText.trim() || !user) return;
+    
+    try {
+      await updateTodo(user.uid, id, { text: editText.trim() });
       setTodayTodos(todayTodos.map(todo => 
         todo.id === id ? { ...todo, text: editText.trim() } : todo
       ));
+      setEditingTodo(null);
+      setEditText('');
+    } catch (error) {
+      console.error('Error updating todo:', error);
     }
-    setEditingTodo(null);
-    setEditText('');
   };
 
   const cancelEdit = () => {
@@ -82,58 +126,77 @@ export default function DashboardPage() {
     setEditText('');
   };
 
-  const deleteTodo = (id: number) => {
-    setTodayTodos(todayTodos.filter(todo => todo.id !== id));
+  const deleteTodo = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      await deleteTodoFromFirestore(user.uid, id);
+      setTodayTodos(todayTodos.filter(todo => todo.id !== id));
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+    }
   };
 
-  return (
-    <div className="min-h-screen bg-app">
-      <Header />
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className="min-h-screen bg-app flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-app/30 border-t-app rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-muted">Loading dashboard...</p>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
-      <div className="max-w-7xl mx-auto px-8 py-12">
-        {/* Main Grid Layout */}
-        <div className="grid grid-cols-12 gap-8">
-          
-          {/* Left Column - Today's Focus */}
-          <div className="col-span-12 lg:col-span-8 space-y-8">
+  return (
+    <ProtectedRoute>
+      <div className="min-h-screen bg-app">
+        <Header />
+
+        <div className="max-w-7xl mx-auto px-8 py-12">
+          {/* Main Grid Layout */}
+          <div className="grid grid-cols-12 gap-8">
             
-            {/* Today Section - Horizontal Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <DailyStatusCard today={today} />
-              <MonthlyStatsCard currentMonth={currentMonth} />
+            {/* Left Column - Today's Focus */}
+            <div className="col-span-12 lg:col-span-8 space-y-8">
+              
+              {/* Today Section - Horizontal Layout */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <DailyStatusCard today={today} />
+                <MonthlyStatsCard currentMonth={currentMonth} />
+              </div>
+
+              {/* Daily Work Summary - Full Width */}
+              <WorkSummaryCard today={today} />
+
             </div>
 
-            {/* Daily Work Summary - Full Width */}
-            <WorkSummaryCard 
-              todayUpdate={todayUpdate}
-              setTodayUpdate={setTodayUpdate}
-            />
-
+            {/* Right Column - TODOs Sidebar */}
+            <div className="col-span-12 lg:col-span-4">
+              <TodoSidebar
+                yesterday={yesterday}
+                today={today}
+                yesterdayTodos={yesterdayTodos}
+                todayTodos={todayTodos}
+                newTodayTodo={newTodayTodo}
+                setNewTodayTodo={setNewTodayTodo}
+                editingTodo={editingTodo}
+                editText={editText}
+                setEditText={setEditText}
+                addTodayTodo={addTodayTodo}
+                toggleTodayTodo={toggleTodayTodo}
+                startEditing={startEditing}
+                saveEdit={saveEdit}
+                cancelEdit={cancelEdit}
+                deleteTodo={deleteTodo}
+              />
+            </div>
+            
           </div>
-
-          {/* Right Column - TODOs Sidebar */}
-          <div className="col-span-12 lg:col-span-4">
-            <TodoSidebar
-              yesterday={yesterday}
-              today={today}
-              yesterdayTodos={yesterdayTodos}
-              todayTodos={todayTodos}
-              newTodayTodo={newTodayTodo}
-              setNewTodayTodo={setNewTodayTodo}
-              editingTodo={editingTodo}
-              editText={editText}
-              setEditText={setEditText}
-              addTodayTodo={addTodayTodo}
-              toggleTodayTodo={toggleTodayTodo}
-              startEditing={startEditing}
-              saveEdit={saveEdit}
-              cancelEdit={cancelEdit}
-              deleteTodo={deleteTodo}
-            />
-          </div>
-          
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

@@ -3,7 +3,7 @@
 import TodoList from './todo-list';
 
 interface Todo {
-  id: number;
+  id: string;
   text: string;
   completed: boolean;
 }
@@ -15,15 +15,15 @@ interface TodoSidebarProps {
   todayTodos: Todo[];
   newTodayTodo: string;
   setNewTodayTodo: (value: string) => void;
-  editingTodo: number | null;
+  editingTodo: string | null;
   editText: string;
   setEditText: (value: string) => void;
   addTodayTodo: () => void;
-  toggleTodayTodo: (id: number) => void;
-  startEditing: (id: number, text: string) => void;
-  saveEdit: (id: number) => void;
+  toggleTodayTodo: (id: string) => void;
+  startEditing: (id: string, text: string) => void;
+  saveEdit: (id: string) => void;
   cancelEdit: () => void;
-  deleteTodo: (id: number) => void;
+  deleteTodo: (id: string) => void;
 }
 
 export default function TodoSidebar({
