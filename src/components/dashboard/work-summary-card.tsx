@@ -94,11 +94,7 @@ export default function WorkSummaryCard({ today }: WorkSummaryCardProps) {
             rows={5}
             style={{ height: 'auto', minHeight: '120px' }}
           />
-        </div>
-        
-        <div className="text-sm text-muted bg-muted/20 p-4 rounded-lg border border-app/30">
-          💡 This will be used for your weekly updates and can be copied later
-        </div>
+        </div>m
       </div>
     </div>
   );

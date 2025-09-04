@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { getDailyEntry, saveDailyEntry, getTodosForDate } from '@/lib/firestore';
@@ -34,9 +34,62 @@ export default function CalendarView({
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('both');
   const [loading, setLoading] = useState(true);
+  const [copySuccess, setCopySuccess] = useState<string | null>(null);
 
   const monthName = currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   
+  // Helper functions
+  const formatDateKey = useCallback((date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const isCurrentMonth = (date: Date) => date.getMonth() === currentDate.getMonth();
+  
+  const isToday = (date: Date) => {
+    const today = new Date();
+    return date.toDateString() === today.toDateString();
+  };
+
+  const getStatusColor = (status: StatusType) => {
+    switch (status) {
+      case 'office': return 'bg-blue-400/60';
+      case 'wfh': return 'bg-green-400/60';
+      case 'leave': return 'bg-orange-400/60';
+      default: return 'bg-gray-300/60';
+    }
+  };
+
+  const getStatusText = (status: StatusType) => {
+    switch (status) {
+      case 'office': return 'Office';
+      case 'wfh': return 'WFH';
+      case 'leave': return 'Leave';
+      default: return '';
+    }
+  };
+
+  // Generate calendar days for rendering
+  const calendarDays = useMemo(() => {
+    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+    const startCalendar = new Date(firstDayOfMonth);
+    startCalendar.setDate(startCalendar.getDate() - firstDayOfMonth.getDay()); // Start from Sunday
+    
+    const days: Date[] = [];
+    const currentCalendarDay = new Date(startCalendar);
+    
+    // Generate 42 days (6 weeks) for calendar grid
+    for (let i = 0; i < 42; i++) {
+      days.push(new Date(currentCalendarDay));
+      currentCalendarDay.setDate(currentCalendarDay.getDate() + 1);
+    }
+    
+    return days;
+  }, [currentDate]);
+  
+  // Load month data
   useEffect(() => {
     const loadMonthData = async () => {
       if (!user) return;
@@ -44,40 +97,40 @@ export default function CalendarView({
       try {
         setLoading(true);
         
-        // Generate calendar days
-        const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-        const startCalendar = new Date(firstDayOfMonth);
-        startCalendar.setDate(startCalendar.getDate() - firstDayOfMonth.getDay()); // Start from Sunday
-        
-        const calendarDays: Date[] = [];
-        const currentCalendarDay = new Date(startCalendar);
-        
-        // Generate 42 days (6 weeks) for calendar grid
-        for (let i = 0; i < 42; i++) {
-          calendarDays.push(new Date(currentCalendarDay));
-          currentCalendarDay.setDate(currentCalendarDay.getDate() + 1);
-        }
-        
         const data: Record<string, DayData> = {};
         
-        // Load data for all days in the calendar view
-        for (const day of calendarDays) {
-          const year = day.getFullYear();
-          const month = String(day.getMonth() + 1).padStart(2, '0');
-          const dayNum = String(day.getDate()).padStart(2, '0');
-          const dayKey = `${year}-${month}-${dayNum}`;
+        // Process data in batches to improve performance
+        const batchSize = 7; // Process a week at a time
+        for (let i = 0; i < calendarDays.length; i += batchSize) {
+          const batch = calendarDays.slice(i, i + batchSize);
           
-          const [dailyEntry, todos] = await Promise.all([
-            getDailyEntry(user.uid, day),
-            getTodosForDate(user.uid, day)
-          ]);
+          // Create promises for all days in the batch
+          const batchPromises = batch.map(async (day) => {
+            const dayKey = formatDateKey(day);
+            
+            const [dailyEntry, todos] = await Promise.all([
+              getDailyEntry(user.uid, day),
+              getTodosForDate(user.uid, day)
+            ]);
+            
+            return {
+              key: dayKey,
+              data: {
+                date: day,
+                status: dailyEntry?.status || null,
+                workSummary: dailyEntry?.workSummary || '',
+                todos
+              }
+            };
+          });
           
-          data[dayKey] = {
-            date: day,
-            status: dailyEntry?.status || null,
-            workSummary: dailyEntry?.workSummary || '',
-            todos
-          };
+          // Wait for all promises in this batch to resolve
+          const results = await Promise.all(batchPromises);
+          
+          // Add results to data object
+          results.forEach(result => {
+            data[result.key] = result.data;
+          });
         }
         
         setMonthData(data);
@@ -104,53 +157,9 @@ export default function CalendarView({
     return () => {
       window.removeEventListener('daily-entry-updated', handleDataUpdate);
     };
-  }, [user, currentDate]);
+  }, [user, currentDate, calendarDays, formatDateKey]);
 
-  // Generate calendar days for rendering
-  const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-  const startCalendar = new Date(firstDayOfMonth);
-  startCalendar.setDate(startCalendar.getDate() - firstDayOfMonth.getDay()); // Start from Sunday
-  
-  const calendarDays: Date[] = [];
-  const currentCalendarDay = new Date(startCalendar);
-  
-  // Generate 42 days (6 weeks) for calendar grid
-  for (let i = 0; i < 42; i++) {
-    calendarDays.push(new Date(currentCalendarDay));
-    currentCalendarDay.setDate(currentCalendarDay.getDate() + 1);
-  }
-
-  const formatDateKey = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  const isCurrentMonth = (date: Date) => date.getMonth() === currentDate.getMonth();
-  const isToday = (date: Date) => {
-    const today = new Date();
-    return date.toDateString() === today.toDateString();
-  };
-
-  const getStatusColor = (status: StatusType) => {
-    switch (status) {
-      case 'office': return 'bg-blue-400/60';
-      case 'wfh': return 'bg-green-400/60';
-      case 'leave': return 'bg-orange-400/60';
-      default: return 'bg-gray-300/60';
-    }
-  };
-
-  const getStatusText = (status: StatusType) => {
-    switch (status) {
-      case 'office': return 'Office';
-      case 'wfh': return 'WFH';
-      case 'leave': return 'Leave';
-      default: return '';
-    }
-  };
-
+  // Copy day content to clipboard
   const copyDayContent = async (date: Date) => {
     const dayKey = formatDateKey(date);
     const dayData = monthData[dayKey];
@@ -180,17 +189,23 @@ export default function CalendarView({
       content += `Tasks:\n${dayData.todos.map(todo => `• ${todo.text}`).join('\n')}\n`;
     }
     
-    await navigator.clipboard.writeText(content.trim());
+    try {
+      await navigator.clipboard.writeText(content.trim());
+      setCopySuccess('Copied!');
+      setTimeout(() => setCopySuccess(null), 2000);
+    } catch (error) {
+      console.error('Failed to copy content:', error);
+      setCopySuccess('Copy failed');
+      setTimeout(() => setCopySuccess(null), 2000);
+    }
   };
 
+  // Update day data
   const handleDayUpdate = async (date: Date, status: StatusType, workSummary: string) => {
     if (!user) return;
     
     try {
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
-      const dateStr = `${year}-${month}-${day}`;
+      const dateStr = formatDateKey(date);
       
       await saveDailyEntry(user.uid, {
         date: dateStr,
@@ -218,9 +233,10 @@ export default function CalendarView({
     }
   };
 
+  // Loading skeleton
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6" aria-busy="true" aria-label="Loading calendar">
         <div className="flex items-center justify-between">
           <div className="h-8 bg-muted rounded w-48 animate-pulse"></div>
           <div className="flex gap-3">
@@ -229,10 +245,10 @@ export default function CalendarView({
             <div className="h-8 w-8 bg-muted rounded animate-pulse"></div>
           </div>
         </div>
-        <div className="bg-muted/30 border border-app/10 rounded-lg p-4">
+        <div className="bg-muted/30 rounded-lg ">
           <div className="grid grid-cols-7 gap-0">
             {[...Array(42)].map((_, i) => (
-              <div key={i} className="h-24 bg-muted/50 rounded animate-pulse m-1"></div>
+              <div key={i} className="h-24 bg-muted rounded animate-pulse m-1"></div>
             ))}
           </div>
         </div>
@@ -247,7 +263,7 @@ export default function CalendarView({
         <h1 className="text-2xl font-semibold text-app">{monthName}</h1>
         <div className="flex items-center gap-3">
           {/* View Mode Toggle */}
-          <div className="flex bg-muted rounded-md p-0.5">
+          <div className="flex bg-muted rounded-md p-0.5" role="group" aria-label="View mode options">
             {(['notes', 'tasks', 'both'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
@@ -257,6 +273,8 @@ export default function CalendarView({
                     ? 'bg-app text-muted shadow-sm'
                     : 'text-muted hover:text-app'
                 }`}
+                aria-pressed={viewMode === mode}
+                aria-label={`Show ${mode}`}
               >
                 {mode.charAt(0).toUpperCase() + mode.slice(1)}
               </button>
@@ -266,18 +284,21 @@ export default function CalendarView({
           <button
             onClick={onToday}
             className="px-2.5 py-1 text-sm bg-muted hover:bg-muted/80 rounded text-app transition-all duration-200"
+            aria-label="Go to today"
           >
             Today
           </button>
           <button
             onClick={onPreviousMonth}
             className="p-1.5 hover:bg-muted rounded text-muted hover:text-app transition-all duration-200"
+            aria-label="Previous month"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
           <button
             onClick={onNextMonth}
             className="p-1.5 hover:bg-muted rounded text-muted hover:text-app transition-all duration-200"
+            aria-label="Next month"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -285,35 +306,47 @@ export default function CalendarView({
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-muted/30 border border-app/10 rounded-lg p-4">
+      <div className="bg-muted/30 rounded-lg ">
         {/* Day headers */}
-        <div className="grid grid-cols-7 gap-0 mb-2">
+        <div className="grid grid-cols-7 gap-0 mb-2" role="row">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-            <div key={day} className="p-2 text-center text-xs font-medium text-muted">
+            <div key={day} className="p-2 text-center text-xs font-medium text-muted" role="columnheader">
               {day}
             </div>
           ))}
         </div>
 
         {/* Calendar days */}
-        <div className="grid grid-cols-7 gap-0">
+        <div className="grid grid-cols-7 gap-1" role="grid">
           {calendarDays.map(date => {
             const dayKey = formatDateKey(date);
             const dayData = monthData[dayKey];
             const isCurrentMonthDay = isCurrentMonth(date);
             const isTodayDay = isToday(date);
+            const dateLabel = date.toLocaleDateString('en-US', { 
+              weekday: 'long', 
+              month: 'long', 
+              day: 'numeric' 
+            });
             
             return (
               <div
                 key={dayKey}
-                className={`h-24 p-2 transition-all duration-200 cursor-pointer group relative hover:bg-muted/50 ${
+                className={`h-24 p-2 m-1 ${isTodayDay ? 'bg-gray-900' : isCurrentMonthDay ? 'bg-muted' : 'bg-muted/80'} rounded-md transition-all duration-200 cursor-pointer group relative hover:bg-muted/50 ${
                   isCurrentMonthDay 
                     ? 'text-app' 
                     : 'text-muted/60'
-                } ${
-                  isTodayDay ? 'bg-accent/10 rounded-md' : ''
                 }`}
                 onClick={() => setSelectedDay(date)}
+                role="gridcell"
+                aria-label={dateLabel}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedDay(date);
+                  }
+                }}
               >
                 <div className="h-full flex flex-col">
                   <div className="flex items-center justify-between mb-1">
@@ -328,7 +361,7 @@ export default function CalendarView({
                     </span>
                     
                     {/* Copy button */}
-                    {isCurrentMonthDay && (dayData?.status || dayData?.workSummary || dayData?.todos.length > 0) && (
+                    {isCurrentMonthDay && (dayData?.status || dayData?.workSummary || (dayData?.todos?.length ?? 0) > 0) && (
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -336,6 +369,7 @@ export default function CalendarView({
                         }}
                         className="opacity-0 group-hover:opacity-60 p-0.5 hover:bg-muted rounded text-muted hover:text-app transition-all duration-200"
                         title="Copy day content"
+                        aria-label={`Copy content for ${dateLabel}`}
                       >
                         <Copy className="w-3 h-3" />
                       </button>
@@ -345,7 +379,10 @@ export default function CalendarView({
                   {/* Status indicator */}
                   {dayData?.status && (
                     <div className="flex items-center gap-1.5 mb-1">
-                      <div className={`w-1.5 h-1.5 rounded-full ${getStatusColor(dayData.status)}`}></div>
+                      <div 
+                        className={`w-1.5 h-1.5 rounded-full ${getStatusColor(dayData.status)}`}
+                        aria-hidden="true"
+                      ></div>
                       <span className="text-[9px] text-muted font-medium uppercase tracking-wide">
                         {getStatusText(dayData.status)}
                       </span>
@@ -355,11 +392,15 @@ export default function CalendarView({
                   {/* Content indicators */}
                   <div className="flex-1 flex flex-col justify-end space-y-0.5">
                     {dayData?.workSummary && (viewMode === 'notes' || viewMode === 'both') && (
-                      <div className="w-1 h-1 bg-muted rounded-full"></div>
+                      <div 
+                        className="w-1 h-1 bg-muted rounded-full" 
+                        aria-hidden="true"
+                        title="Has notes"
+                      ></div>
                     )}
-                    {dayData?.todos.length > 0 && (viewMode === 'tasks' || viewMode === 'both') && (
+                    {(dayData?.todos?.length ?? 0) > 0 && (viewMode === 'tasks' || viewMode === 'both') && (
                       <div className="text-[9px] text-muted font-medium">
-                        {dayData.todos.length} task{dayData.todos.length !== 1 ? 's' : ''}
+                        {dayData?.todos?.length} task{(dayData?.todos?.length ?? 0) !== 1 ? 's' : ''}
                       </div>
                     )}
                   </div>
@@ -369,6 +410,17 @@ export default function CalendarView({
           })}
         </div>
       </div>
+
+      {/* Copy success notification */}
+      {copySuccess && (
+        <div 
+          className="fixed bottom-4 right-4 bg-app text-white px-3 py-2 rounded shadow-lg"
+          role="status"
+          aria-live="polite"
+        >
+          {copySuccess}
+        </div>
+      )}
 
       {/* Day Edit Modal */}
       {selectedDay && (
