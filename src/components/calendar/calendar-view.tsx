@@ -259,16 +259,16 @@ export default function CalendarView({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-app">{monthName}</h1>
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0">
+        <h1 className="text-xl sm:text-2xl font-semibold text-app">{monthName}</h1>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {/* View Mode Toggle */}
           <div className="flex bg-muted rounded-md p-0.5" role="group" aria-label="View mode options">
             {(['notes', 'tasks', 'both'] as ViewMode[]).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-2.5 py-1 text-xs rounded transition-all duration-200 ${
+                className={`px-2 sm:px-2.5 py-1 text-xs rounded transition-all duration-200 ${
                   viewMode === mode
                     ? 'bg-app text-muted shadow-sm'
                     : 'text-muted hover:text-app'
@@ -283,7 +283,7 @@ export default function CalendarView({
           
           <button
             onClick={onToday}
-            className="px-2.5 py-1 text-sm bg-muted hover:bg-muted/80 rounded text-app transition-all duration-200"
+            className="px-2 sm:px-2.5 py-1 text-xs sm:text-sm bg-muted hover:bg-muted/80 rounded text-app transition-all duration-200"
             aria-label="Go to today"
           >
             Today
@@ -306,9 +306,9 @@ export default function CalendarView({
       </div>
 
       {/* Calendar Grid */}
-      <div className="bg-muted/30 rounded-lg ">
+      <div className="bg-muted/30 rounded-lg overflow-x-auto">
         {/* Day headers */}
-        <div className="grid grid-cols-7 gap-0 mb-2" role="row">
+        <div className="grid grid-cols-7 gap-0 mb-2 min-w-[640px]" role="row">
           {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
             <div key={day} className="p-2 text-center text-xs font-medium text-muted" role="columnheader">
               {day}
@@ -317,7 +317,7 @@ export default function CalendarView({
         </div>
 
         {/* Calendar days */}
-        <div className="grid grid-cols-7 gap-1" role="grid">
+        <div className="grid grid-cols-7 gap-1 min-w-[640px]" role="grid">
           {calendarDays.map(date => {
             const dayKey = formatDateKey(date);
             const dayData = monthData[dayKey];
@@ -332,7 +332,7 @@ export default function CalendarView({
             return (
               <div
                 key={dayKey}
-                className={`h-24 p-2 m-1 ${isTodayDay ? 'bg-gray-900' : isCurrentMonthDay ? 'bg-muted' : 'bg-muted/80'} rounded-md transition-all duration-200 cursor-pointer group relative hover:bg-muted/50 ${
+                className={`h-20 sm:h-24 p-1 sm:p-2 m-0.5 sm:m-1 ${isTodayDay ? 'bg-gray-900' : isCurrentMonthDay ? 'bg-muted' : 'bg-muted/80'} rounded-md transition-all duration-200 cursor-pointer group relative hover:bg-muted/50 ${
                   isCurrentMonthDay 
                     ? 'text-app' 
                     : 'text-muted/60'
@@ -350,7 +350,7 @@ export default function CalendarView({
               >
                 <div className="h-full flex flex-col">
                   <div className="flex items-center justify-between mb-1">
-                    <span className={`text-sm ${
+                    <span className={`text-xs sm:text-sm ${
                       isCurrentMonthDay 
                         ? isTodayDay 
                           ? 'text-accent font-medium' 
@@ -378,7 +378,7 @@ export default function CalendarView({
                   
                   {/* Status indicator */}
                   {dayData?.status && (
-                    <div className="flex items-center gap-1.5 mb-1">
+                    <div className="hidden sm:flex items-center gap-1.5 mb-1">
                       <div 
                         className={`w-1.5 h-1.5 rounded-full ${getStatusColor(dayData.status)}`}
                         aria-hidden="true"
@@ -386,6 +386,17 @@ export default function CalendarView({
                       <span className="text-[9px] text-muted font-medium uppercase tracking-wide">
                         {getStatusText(dayData.status)}
                       </span>
+                    </div>
+                  )}
+                  
+                  {/* Mobile status indicator (dot only) */}
+                  {dayData?.status && (
+                    <div className="sm:hidden flex mb-1">
+                      <div 
+                        className={`w-2 h-2 rounded-full ${getStatusColor(dayData.status)}`}
+                        aria-hidden="true"
+                        title={getStatusText(dayData.status)}
+                      ></div>
                     </div>
                   )}
                   

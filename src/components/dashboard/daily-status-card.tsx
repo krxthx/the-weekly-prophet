@@ -101,7 +101,7 @@ export default function DailyStatusCard({ today }: DailyStatusCardProps) {
   }
 
   return (
-    <div className="bg-muted/30 border border-app rounded-xl p-8">
+    <div className="bg-muted/30 border border-app rounded-xl p-8 h-full flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <span className="text-2xl">📅</span>
         <h2 className="text-xl font-medium text-app">Today</h2>
@@ -121,7 +121,7 @@ export default function DailyStatusCard({ today }: DailyStatusCardProps) {
         </div>
       )}
       
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-4 mt-auto">
         <button 
           onClick={() => handleStatusChange('office')}
           className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${

@@ -57,7 +57,7 @@ export default function MonthlyStatsCard({ currentMonth }: MonthlyStatsCardProps
 
   if (loading) {
     return (
-      <div className="bg-muted/30 border border-app rounded-xl p-8">
+      <div className="bg-muted/30 border border-app rounded-xl p-8 h-full">
         <div className="animate-pulse">
           <div className="h-6 bg-muted rounded mb-6"></div>
           <div className="grid grid-cols-3 gap-4">
@@ -75,19 +75,19 @@ export default function MonthlyStatsCard({ currentMonth }: MonthlyStatsCardProps
   }
 
   return (
-    <div className="bg-muted/30 border border-app rounded-xl p-8">
+    <div className="bg-muted/30 border border-app rounded-xl p-6 h-full flex flex-col">
       <div className="flex items-center gap-3 mb-6">
         <span className="text-2xl">📊</span>
-        <h2 className="text-xl font-medium text-app">{currentMonth}</h2>
+        <h2 className="text-xl font-medium text-app">{currentMonth} Stats</h2>
       </div>
       
       {stats.totalDays === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-8 flex-1 flex flex-col justify-center">
           <div className="text-muted text-sm mb-2">No work data for this month</div>
           <div className="text-xs text-muted">Start logging your daily status to see statistics</div>
         </div>
       ) : (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-4 mt-auto">
           <div className="text-center">
             <div className="text-2xl mb-2">🏢</div>
             <div className="text-2xl font-medium text-app mb-1">{stats.officeDays}</div>

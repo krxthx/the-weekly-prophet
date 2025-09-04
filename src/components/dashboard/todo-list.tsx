@@ -49,24 +49,24 @@ export default function TodoList({
     : 0;
 
   return (
-    <div className={showAddInput ? 'mb-8' : 'mb-8'}>
-      <h3 className={`text-sm font-medium mb-4 ${isEditable ? 'text-app' : 'text-muted'}`}>
+    <div className="h-full flex flex-col min-h-0">
+      <h3 className={`text-sm font-medium mb-3 ${isEditable ? 'text-app' : 'text-muted'}`}>
         {title}
       </h3>
       
       {/* Add Todo Input - only for editable lists */}
       {showAddInput && onNewTodoChange && onAddTodo && (
-        <div className="flex gap-3 mb-6">
+        <div className="flex gap-2 mb-3">
           <input 
             value={newTodoValue}
             onChange={(e) => onNewTodoChange(e.target.value)}
             placeholder="Add task..."
-            className="input flex-1 h-10 text-sm"
+            className="input flex-1 h-9 text-sm"
             onKeyPress={(e) => e.key === 'Enter' && onAddTodo()}
           />
           <button 
             onClick={onAddTodo}
-            className="btn btn-primary px-4 py-2 h-10 text-sm"
+            className="btn btn-primary px-3 py-1 h-9 text-sm"
           >
             +
           </button>
@@ -74,10 +74,10 @@ export default function TodoList({
       )}
 
       {/* Todo List */}
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+      <div className="space-y-2 flex-1 overflow-y-auto pr-1 custom-scrollbar min-h-0">
         {displayTodos.length === 0 ? (
-          <div className="text-center py-8">
-            <div className="text-muted text-sm mb-1">
+          <div className="text-center py-4">
+            <div className="text-muted text-sm">
               {isEditable ? 'No tasks yet' : 'No tasks from yesterday'}
             </div>
             <div className="text-xs text-muted">
@@ -88,7 +88,7 @@ export default function TodoList({
           displayTodos.map((todo) => (
             <div 
               key={todo.id}
-              className={`flex items-center gap-3 p-3 border rounded-lg transition-colors group ${
+              className={`flex items-center gap-2 py-2 px-2.5 border rounded-lg transition-colors group ${
                 isEditable 
                   ? 'border-app hover:bg-muted' 
                   : 'border-app/50 bg-muted/20'
@@ -102,8 +102,8 @@ export default function TodoList({
                   todo.completed 
                     ? 'bg-accent border-accent' 
                     : isEditable 
-                      ? 'border-muted hover:border-app'
-                      : 'border-muted'
+                      ? 'border-app hover:border-app'
+                      : 'border-app'
                 }`}
               >
                 {todo.completed && (
@@ -118,7 +118,7 @@ export default function TodoList({
                   <input
                     value={editText}
                     onChange={(e) => onEditTextChange?.(e.target.value)}
-                    className="input flex-1 h-8 text-sm w-full"
+                    className="input flex-1 h-7 text-xs w-full"
                     onKeyPress={(e) => {
                       if (e.key === 'Enter') onSaveEdit?.(todo.id);
                       if (e.key === 'Escape') onCancelEdit?.();
@@ -131,7 +131,7 @@ export default function TodoList({
                 /* View mode */
                 <div className="flex-1 flex items-center justify-between min-w-0">
                   <span 
-                    className={`text-sm truncate flex-1 ${
+                    className={`text-xs truncate flex-1 ${
                       todo.completed 
                         ? 'line-through text-muted' 
                         : 'text-app'
@@ -146,7 +146,7 @@ export default function TodoList({
                   {isEditable && onDeleteTodo && (
                     <button
                       onClick={() => onDeleteTodo(todo.id)}
-                      className="text-muted hover:text-red-400 text-sm p-1 opacity-0 group-hover:opacity-100 transition-opacity ml-3"
+                      className="text-muted hover:text-red-400 text-xs p-0.5 opacity-0 group-hover:opacity-100 transition-opacity ml-2"
                       title="Delete"
                     >
                       🗑️
@@ -160,7 +160,7 @@ export default function TodoList({
         
         {/* Show remaining count for truncated lists */}
         {remainingCount > 0 && (
-          <div className="text-sm text-muted text-center py-2">
+          <div className="text-xs text-muted text-center py-1">
             +{remainingCount} more items
           </div>
         )}

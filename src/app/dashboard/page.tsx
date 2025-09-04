@@ -25,19 +25,12 @@ export default function DashboardPage() {
   const { user } = useAuth();
   
   const today = useMemo(() => new Date(), []);
-  const yesterday = useMemo(() => {
-    const date = new Date();
-    date.setDate(date.getDate() - 1);
-    return date;
-  }, []);
-  
   const currentMonth = today.toLocaleDateString('en-US', { month: 'long' });
 
   // State
   const [newTodayTodo, setNewTodayTodo] = useState('');
   const [editingTodo, setEditingTodo] = useState<string | null>(null);
   const [editText, setEditText] = useState('');
-  const [yesterdayTodos, setYesterdayTodos] = useState<Todo[]>([]);
   const [todayTodos, setTodayTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,12 +41,7 @@ export default function DashboardPage() {
       
       try {
         setLoading(true);
-        const [yesterdayData, todayData] = await Promise.all([
-          getTodosForDate(user.uid, yesterday),
-          getTodosForDate(user.uid, today)
-        ]);
-        
-        setYesterdayTodos(yesterdayData);
+        const todayData = await getTodosForDate(user.uid, today);
         setTodayTodos(todayData);
       } catch (error) {
         console.error('Error loading todos:', error);
@@ -65,7 +53,7 @@ export default function DashboardPage() {
     if (user) {
       loadTodos();
     }
-  }, [user, yesterday, today]);
+  }, [user, today]);
 
   // TODO functions
   const addTodayTodo = async () => {
@@ -155,30 +143,16 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-app">
         <Header />
 
-        <div className="max-w-7xl mx-auto px-8 py-12">
-          {/* Main Grid Layout */}
-          <div className="grid grid-cols-12 gap-8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <h1 className="text-2xl font-bold text-app mb-8 px-2">My Dashboard</h1>
+          
+          {/* Main Dashboard Layout */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
-            {/* Left Column - Today's Focus */}
-            <div className="col-span-12 lg:col-span-8 space-y-8">
-              
-              {/* Today Section - Horizontal Layout */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <DailyStatusCard today={today} />
-                <MonthlyStatsCard currentMonth={currentMonth} />
-              </div>
-
-              {/* Daily Work Summary - Full Width */}
-              <WorkSummaryCard today={today} />
-
-            </div>
-
-            {/* Right Column - TODOs Sidebar */}
-            <div className="col-span-12 lg:col-span-4">
+            {/* Left Side - TODOs */}
+            <div className="lg:col-span-8 transform transition-all duration-300 hover:scale-[1.01] h-full">
               <TodoSidebar
-                yesterday={yesterday}
                 today={today}
-                yesterdayTodos={yesterdayTodos}
                 todayTodos={todayTodos}
                 newTodayTodo={newTodayTodo}
                 setNewTodayTodo={setNewTodayTodo}
@@ -194,6 +168,23 @@ export default function DashboardPage() {
               />
             </div>
             
+            {/* Right Side - Status Cards (Stacked) */}
+            <div className="lg:col-span-4 flex flex-col gap-6 h-full">
+              {/* Daily Status Card */}
+              <div className="transform transition-all duration-300 hover:scale-[1.02] flex-1">
+                <DailyStatusCard today={today} />
+              </div>
+              
+              {/* Monthly Stats Card */}
+              <div className="transform transition-all duration-300 hover:scale-[1.02] flex-1">
+                <MonthlyStatsCard currentMonth={currentMonth} />
+              </div>
+            </div>
+            
+            {/* Bottom - Work Summary Card (Full Width) */}
+            <div className="lg:col-span-12 transform transition-all duration-300 hover:scale-[1.01]">
+              <WorkSummaryCard today={today} />
+            </div>
           </div>
         </div>
       </div>

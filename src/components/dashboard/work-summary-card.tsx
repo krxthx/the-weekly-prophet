@@ -90,11 +90,10 @@ export default function WorkSummaryCard({ today }: WorkSummaryCardProps) {
             value={workSummary}
             onChange={(e) => handleTextChange(e.target.value)}
             placeholder="Summarize your key accomplishments, meetings, or important work from today..."
-            className="input resize-none"
+            className="input resize-none bg-transparent"
             rows={5}
-            style={{ height: 'auto', minHeight: '120px' }}
           />
-        </div>m
+        </div>
       </div>
     </div>
   );
