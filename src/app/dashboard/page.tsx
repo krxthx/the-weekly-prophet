@@ -12,13 +12,19 @@ import {
   addTodo, 
   updateTodo, 
   deleteTodo as deleteTodoFromFirestore, 
-  getTodosForDate 
+  getTodosForDate,
+  reorderTodos as reorderTodosInFirestore
 } from '@/lib/firestore';
 
-interface Todo {
+// Import the Todo type from firestore
+import type { Todo as FirestoreTodo } from '@/lib/firestore';
+
+// Local Todo type that extends the Firestore Todo type
+interface Todo extends Omit<FirestoreTodo, 'createdAt' | 'updatedAt'> {
   id: string;
   text: string;
   completed: boolean;
+  order?: number;
 }
 
 export default function DashboardPage() {
@@ -124,6 +130,24 @@ export default function DashboardPage() {
       console.error('Error deleting todo:', error);
     }
   };
+  
+  const reorderTodos = async (reorderedTodos: Todo[]) => {
+    if (!user) return;
+    
+    try {
+      // Update the local state immediately for a responsive UI
+      setTodayTodos(reorderedTodos);
+      
+      // Update the order in Firestore
+      // Convert local Todo type to Firestore Todo type
+      await reorderTodosInFirestore(user.uid, today, reorderedTodos as FirestoreTodo[]);
+    } catch (error) {
+      console.error('Error reordering todos:', error);
+      // If there's an error, reload the original order
+      const todayData = await getTodosForDate(user.uid, today);
+      setTodayTodos(todayData);
+    }
+  };
 
   if (loading) {
     return (
@@ -165,6 +189,7 @@ export default function DashboardPage() {
                 saveEdit={saveEdit}
                 cancelEdit={cancelEdit}
                 deleteTodo={deleteTodo}
+                reorderTodos={reorderTodos}
               />
             </div>
             

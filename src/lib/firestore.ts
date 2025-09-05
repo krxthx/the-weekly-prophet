@@ -20,6 +20,7 @@ export interface Todo {
   id: string;
   text: string;
   completed: boolean;
+  order?: number;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
@@ -118,10 +119,19 @@ export const saveDailyEntry = async (userId: string, entry: Partial<DailyEntry>)
 export const addTodo = async (userId: string, date: Date, todoText: string): Promise<string> => {
   try {
     const todosRef = getUserCollection(userId, 'todos');
+    
+    // Get the highest order value for the date
+    const dateStr = formatDate(date);
+    const existingTodos = await getTodosForDate(userId, date);
+    const highestOrder = existingTodos.length > 0 
+      ? Math.max(...existingTodos.map(todo => todo.order || 0)) 
+      : -1;
+    
     const todoData = {
       text: todoText,
       completed: false,
-      date: formatDate(date),
+      date: dateStr,
+      order: highestOrder + 1,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
     };
@@ -157,6 +167,22 @@ export const deleteTodo = async (userId: string, todoId: string): Promise<void> 
   }
 };
 
+export const reorderTodos = async (userId: string, date: Date, reorderedTodos: Todo[]): Promise<void> => {
+  try {
+    // Update each todo with its new order
+    const batch = [];
+    for (let i = 0; i < reorderedTodos.length; i++) {
+      const todo = reorderedTodos[i];
+      batch.push(updateTodo(userId, todo.id, { order: i }));
+    }
+    
+    await Promise.all(batch);
+  } catch (error) {
+    console.error('Error reordering todos:', error);
+    throw error;
+  }
+};
+
 export const getTodosForDate = async (userId: string, date: Date): Promise<Todo[]> => {
   try {
     const dateStr = formatDate(date);
@@ -172,8 +198,11 @@ export const getTodosForDate = async (userId: string, date: Date): Promise<Todo[
       ...doc.data()
     })) as Todo[];
     
-    // Sort by createdAt on the client side
+    // Sort by order if available, otherwise fall back to createdAt
     return todos.sort((a, b) => {
+      if (a.order !== undefined && b.order !== undefined) {
+        return a.order - b.order;
+      }
       if (!a.createdAt || !b.createdAt) return 0;
       return a.createdAt.seconds - b.createdAt.seconds;
     });

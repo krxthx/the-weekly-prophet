@@ -2,13 +2,24 @@
 
 import { useState } from 'react';
 import { X } from 'lucide-react';
+import TodoList from '@/components/dashboard/todo-list';
+import { useAuth } from '@/contexts/auth-context';
+import { addTodo, updateTodo, deleteTodo as deleteTodoFromFirestore, getTodosForDate } from '@/lib/firestore';
 
 type StatusType = 'office' | 'wfh' | 'leave' | null;
+
+interface Todo {
+  id: string;
+  text: string;
+  completed: boolean;
+  order?: number;
+}
 
 interface DayEditModalProps {
   date: Date;
   initialStatus: StatusType;
   initialWorkSummary: string;
+  initialTodos?: Todo[];
   onSave: (date: Date, status: StatusType, workSummary: string) => void;
   onClose: () => void;
 }
@@ -16,12 +27,18 @@ interface DayEditModalProps {
 export default function DayEditModal({ 
   date, 
   initialStatus, 
-  initialWorkSummary, 
+  initialWorkSummary,
+  initialTodos = [],
   onSave, 
   onClose 
 }: DayEditModalProps) {
+  const { user } = useAuth();
   const [status, setStatus] = useState<StatusType>(initialStatus);
   const [workSummary, setWorkSummary] = useState(initialWorkSummary);
+  const [todos, setTodos] = useState<Todo[]>(initialTodos);
+  const [newTodo, setNewTodo] = useState('');
+  const [editingTodo, setEditingTodo] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   const dateString = date.toLocaleDateString('en-US', { 
     weekday: 'long', 
@@ -33,6 +50,98 @@ export default function DayEditModal({
   const handleSave = () => {
     onSave(date, status, workSummary);
     onClose();
+  };
+  
+  // Todo functions
+  const addNewTodo = async () => {
+    if (!newTodo.trim() || !user) return;
+    
+    try {
+      const todoId = await addTodo(user.uid, date, newTodo.trim());
+      const newTodoItem: Todo = {
+        id: todoId,
+        text: newTodo.trim(),
+        completed: false
+      };
+      setTodos([...todos, newTodoItem]);
+      setNewTodo('');
+    } catch (error) {
+      console.error('Error adding todo:', error);
+    }
+  };
+
+  const toggleTodo = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      const todo = todos.find(t => t.id === id);
+      if (!todo) return;
+      
+      await updateTodo(user.uid, id, { completed: !todo.completed });
+      setTodos(todos.map(todo => 
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      ));
+    } catch (error) {
+      console.error('Error toggling todo:', error);
+    }
+  };
+
+  const startEditing = (id: string, text: string) => {
+    setEditingTodo(id);
+    setEditText(text);
+  };
+
+  const saveEdit = async (id: string) => {
+    if (!editText.trim() || !user) return;
+    
+    try {
+      await updateTodo(user.uid, id, { text: editText.trim() });
+      setTodos(todos.map(todo => 
+        todo.id === id ? { ...todo, text: editText.trim() } : todo
+      ));
+      setEditingTodo(null);
+      setEditText('');
+    } catch (error) {
+      console.error('Error updating todo:', error);
+    }
+  };
+
+  const cancelEdit = () => {
+    setEditingTodo(null);
+    setEditText('');
+  };
+
+  const deleteTodo = async (id: string) => {
+    if (!user) return;
+    
+    try {
+      await deleteTodoFromFirestore(user.uid, id);
+      setTodos(todos.filter(todo => todo.id !== id));
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+    }
+  };
+  
+  const reorderTodos = async (reorderedTodos: Todo[]) => {
+    if (!user) return;
+    
+    try {
+      setTodos(reorderedTodos);
+      
+      // Update the order in Firestore
+      const batch = [];
+      for (let i = 0; i < reorderedTodos.length; i++) {
+        const todo = reorderedTodos[i];
+        batch.push(updateTodo(user.uid, todo.id, { order: i }));
+      }
+      
+      await Promise.all(batch);
+    } catch (error) {
+      console.error('Error reordering todos:', error);
+      // If there's an error, reload the original order
+      const todayData = await getTodosForDate(user.uid, date);
+      setTodos(todayData);
+    }
   };
 
   const handleBackdropClick = (e: React.MouseEvent) => {
@@ -109,6 +218,33 @@ export default function DayEditModal({
               placeholder="What did you work on today? Key accomplishments, meetings, tasks completed..."
               className="w-full h-32 px-3 py-2.5 bg-muted/20 border border-muted/40 rounded-lg focus:border-muted/60 focus:outline-none resize-none text-foreground/90 placeholder-muted-foreground text-sm"
             />
+          </div>
+          
+          {/* Todo List */}
+          <div>
+            <label className="block text-sm font-medium text-foreground/80 mb-3">
+              Tasks
+            </label>
+            <div className="bg-muted/20 border border-muted/40 rounded-lg p-4">
+              <TodoList
+                title="Tasks"
+                todos={todos}
+                isEditable={true}
+                showAddInput={true}
+                newTodoValue={newTodo}
+                onNewTodoChange={setNewTodo}
+                onAddTodo={addNewTodo}
+                onToggleTodo={toggleTodo}
+                onDeleteTodo={deleteTodo}
+                onStartEdit={startEditing}
+                onSaveEdit={saveEdit}
+                onCancelEdit={cancelEdit}
+                editingTodo={editingTodo}
+                editText={editText}
+                onEditTextChange={setEditText}
+                onReorder={reorderTodos}
+              />
+            </div>
           </div>
 
           {/* Action Buttons */}

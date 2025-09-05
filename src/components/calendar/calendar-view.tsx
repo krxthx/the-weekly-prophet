@@ -32,6 +32,7 @@ export default function CalendarView({
   const { user } = useAuth();
   const [monthData, setMonthData] = useState<Record<string, DayData>>({});
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [selectedDayTodos, setSelectedDayTodos] = useState<Array<{ id: string; text: string; completed: boolean; order?: number; }>>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('both');
   const [loading, setLoading] = useState(true);
   const [copySuccess, setCopySuccess] = useState<string | null>(null);
@@ -337,7 +338,10 @@ export default function CalendarView({
                     ? 'text-app' 
                     : 'text-muted/60'
                 }`}
-                onClick={() => setSelectedDay(date)}
+                onClick={() => {
+                  setSelectedDay(date);
+                  setSelectedDayTodos(dayData?.todos || []);
+                }}
                 role="gridcell"
                 aria-label={dateLabel}
                 tabIndex={0}
@@ -439,8 +443,32 @@ export default function CalendarView({
           date={selectedDay}
           initialStatus={monthData[formatDateKey(selectedDay)]?.status || null}
           initialWorkSummary={monthData[formatDateKey(selectedDay)]?.workSummary || ''}
+          initialTodos={selectedDayTodos}
           onSave={handleDayUpdate}
-          onClose={() => setSelectedDay(null)}
+          onClose={() => {
+            setSelectedDay(null);
+            // Refresh the calendar data when modal is closed to reflect any todo changes
+            if (user) {
+              const loadTodos = async () => {
+                try {
+                  const dayKey = formatDateKey(selectedDay);
+                  const todos = await getTodosForDate(user.uid, selectedDay);
+                  
+                  setMonthData(prev => ({
+                    ...prev,
+                    [dayKey]: {
+                      ...prev[dayKey],
+                      todos
+                    }
+                  }));
+                } catch (error) {
+                  console.error('Error refreshing todos:', error);
+                }
+              };
+              
+              loadTodos();
+            }
+          }}
         />
       )}
     </div>

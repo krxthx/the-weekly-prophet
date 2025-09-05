@@ -6,6 +6,7 @@ interface Todo {
   id: string;
   text: string;
   completed: boolean;
+  order?: number;
 }
 
 interface TodoSidebarProps {
@@ -22,6 +23,7 @@ interface TodoSidebarProps {
   saveEdit: (id: string) => void;
   cancelEdit: () => void;
   deleteTodo: (id: string) => void;
+  reorderTodos: (reorderedTodos: Todo[]) => void;
 }
 
 export default function TodoSidebar({
@@ -37,7 +39,8 @@ export default function TodoSidebar({
   startEditing,
   saveEdit,
   cancelEdit,
-  deleteTodo
+  deleteTodo,
+  reorderTodos
 }: TodoSidebarProps) {
   return (
     <div className="bg-app border border-app rounded-xl p-6 h-full flex flex-col">
@@ -63,6 +66,7 @@ export default function TodoSidebar({
           editingTodo={editingTodo}
           editText={editText}
           onEditTextChange={setEditText}
+          onReorder={reorderTodos}
         />
       </div>
     </div>
