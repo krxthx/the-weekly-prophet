@@ -177,23 +177,36 @@ export default function DayEditModal({
               Work Status
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {[
-                { value: 'office' as const, label: 'Office', color: 'blue' },
-                { value: 'wfh' as const, label: 'WFH', color: 'green' },
-                { value: 'leave' as const, label: 'Leave', color: 'orange' }
-              ].map(({ value, label, color }) => (
-                <button
-                  key={value}
-                  onClick={() => setStatus(value)}
-                  className={`p-3 rounded-lg border transition-all duration-200 text-sm font-medium ${
-                    status === value
-                      ? `border-${color}-200 bg-${color}-50 text-${color}-700`
-                      : 'border-muted/40 bg-muted/10 text-muted-foreground hover:border-muted/60 hover:text-foreground/80'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
+              <button
+                onClick={() => setStatus('office')}
+                className={`p-3 rounded-lg border transition-all duration-200 text-sm font-medium ${
+                  status === 'office'
+                    ? 'border-blue-500 bg-blue-900/30 text-blue-400'
+                    : 'border-app/40 bg-muted/10 text-muted-foreground hover:border-muted/60 hover:text-foreground/80'
+                }`}
+              >
+                Office
+              </button>
+              <button
+                onClick={() => setStatus('wfh')}
+                className={`p-3 rounded-lg border transition-all duration-200 text-sm font-medium ${
+                  status === 'wfh'
+                    ? 'border-green-500 bg-green-900/30 text-green-400'
+                    : 'border-app/40 bg-muted/10 text-muted-foreground hover:border-muted/60 hover:text-foreground/80'
+                }`}
+              >
+                WFH
+              </button>
+              <button
+                onClick={() => setStatus('leave')}
+                className={`p-3 rounded-lg border transition-all duration-200 text-sm font-medium ${
+                  status === 'leave'
+                    ? 'border-orange-500 bg-orange-900/30 text-orange-400'
+                    : 'border-app/40 bg-muted/10 text-muted-foreground hover:border-muted/60 hover:text-foreground/80'
+                }`}
+              >
+                Leave
+              </button>
             </div>
             
             {status && (
@@ -216,7 +229,7 @@ export default function DayEditModal({
               value={workSummary}
               onChange={(e) => setWorkSummary(e.target.value)}
               placeholder="What did you work on today? Key accomplishments, meetings, tasks completed..."
-              className="w-full h-32 px-3 py-2.5 bg-muted/20 border border-muted/40 rounded-lg focus:border-muted/60 focus:outline-none resize-none text-foreground/90 placeholder-muted-foreground text-sm"
+              className="w-full h-32 px-3 py-2.5 bg-muted/20 border border-app rounded-lg focus:border-app focus:outline-none resize-none text-foreground/90 placeholder-muted-foreground text-sm"
             />
           </div>
           
@@ -225,7 +238,7 @@ export default function DayEditModal({
             <label className="block text-sm font-medium text-foreground/80 mb-3">
               Tasks
             </label>
-            <div className="bg-muted/20 border border-muted/40 rounded-lg p-4">
+            <div className="bg-muted/20 border border-app rounded-lg p-4">
               <TodoList
                 title="Tasks"
                 todos={todos}
@@ -251,13 +264,13 @@ export default function DayEditModal({
           <div className="flex gap-3 pt-2">
             <button
               onClick={onClose}
-              className="flex-1 px-4 py-2.5 bg-muted/40 hover:bg-muted/60 text-foreground/80 rounded-lg transition-all duration-200 text-sm font-medium"
+              className="flex-1 px-4 py-2.5 bg-muted border border-app hover:bg-muted/80 text-app rounded-lg transition-all duration-200 text-sm font-medium"
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
-              className="flex-1 px-4 py-2.5 bg-accent hover:bg-accent/90 text-accent-foreground rounded-lg transition-all duration-200 text-sm font-medium"
+              className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-all duration-200 text-sm font-medium"
             >
               Save
             </button>
