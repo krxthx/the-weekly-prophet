@@ -32,6 +32,19 @@ export default function DashboardPage() {
   
   const today = useMemo(() => new Date(), []);
   const currentMonth = today.toLocaleDateString('en-US', { month: 'long' });
+  
+  // Get user's first name
+  const userName = useMemo(() => {
+    if (!user) return '';
+    
+    // Extract first name from displayName or email
+    if (user.displayName) {
+      return user.displayName.split(' ')[0];
+    } else if (user.email) {
+      return user.email.split('@')[0];
+    }
+    return '';
+  }, [user]);
 
   // State
   const [newTodayTodo, setNewTodayTodo] = useState('');
@@ -162,14 +175,23 @@ export default function DashboardPage() {
     );
   }
 
+  // Get greeting based on time of day
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good morning";
+    if (hour < 18) return "Good afternoon";
+    return "Good evening";
+  };
+
   return (
     <ProtectedRoute>
       <div className="min-h-screen bg-app">
         <Header />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <h1 className="text-2xl font-bold text-app mb-8 px-2">My Dashboard</h1>
-          
+          <h1 className="text-2xl font-bold text-app mb-2 px-2">
+            {getGreeting()}{userName ? `, ${userName}` : ''}!
+          </h1>          
           {/* Main Dashboard Layout */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
             
