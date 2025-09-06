@@ -14,6 +14,16 @@ export default function DailyStatusCard({ today }: DailyStatusCardProps) {
   const { user } = useAuth();
   const [selectedStatus, setSelectedStatus] = useState<StatusType | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Check if today is a weekend (Saturday or Sunday)
+  const isWeekend = today.getDay() === 0 || today.getDay() === 6;
+  
+  // Get user's first name for the weekend message
+  const userName = user?.displayName 
+    ? user.displayName.split(' ')[0] 
+    : user?.email 
+      ? user.email.split('@')[0] 
+      : '';
 
   useEffect(() => {
     const loadTodayStatus = async () => {
@@ -114,42 +124,55 @@ export default function DailyStatusCard({ today }: DailyStatusCardProps) {
         </span>
       </div>
       
-      {!selectedStatus && (
-        <div className="text-center py-4 mb-4">
-          <div className="text-muted text-sm mb-2">No status set for today</div>
-          <div className="text-xs text-muted">Select your work status below</div>
+      {isWeekend ? (
+        <div className="text-center py-4 flex-1 flex flex-col items-center justify-center">
+          <div className="text-accent text-md font-medium">
+            Happy Weekend{userName ? `, ${userName}` : ''}! 🎉
+          </div>
+          <div className="text-muted text-sm mt-2">
+            Enjoy your time off. No work status needed.
+          </div>
         </div>
+      ) : (
+        <>
+          {!selectedStatus && (
+            <div className="text-center py-4 mb-4">
+              <div className="text-muted text-sm mb-2">No status set for today</div>
+              <div className="text-xs text-muted">Select your work status below</div>
+            </div>
+          )}
+          
+          <div className="grid grid-cols-3 gap-4 mt-auto">
+            <button 
+              onClick={() => handleStatusChange('office')}
+              className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${
+                selectedStatus === 'office' ? 'bg-muted' : ''
+              }`}
+            >
+              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🏢</div>
+              <div className="text-sm font-medium text-app">Office</div>
+            </button>
+            <button 
+              onClick={() => handleStatusChange('wfh')}
+              className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${
+                selectedStatus === 'wfh' ? 'bg-muted' : ''
+              }`}
+            >
+              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🏠</div>
+              <div className="text-sm font-medium text-app">WFH</div>
+            </button>
+            <button 
+              onClick={() => handleStatusChange('leave')}
+              className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${
+                selectedStatus === 'leave' ? 'bg-muted' : ''
+              }`}
+            >
+              <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🌴</div>
+              <div className="text-sm font-medium text-app">Leave</div>
+            </button>
+          </div>
+        </>
       )}
-      
-      <div className="grid grid-cols-3 gap-4 mt-auto">
-        <button 
-          onClick={() => handleStatusChange('office')}
-          className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${
-            selectedStatus === 'office' ? 'bg-muted' : ''
-          }`}
-        >
-          <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🏢</div>
-          <div className="text-sm font-medium text-app">Office</div>
-        </button>
-        <button 
-          onClick={() => handleStatusChange('wfh')}
-          className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${
-            selectedStatus === 'wfh' ? 'bg-muted' : ''
-          }`}
-        >
-          <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🏠</div>
-          <div className="text-sm font-medium text-app">WFH</div>
-        </button>
-        <button 
-          onClick={() => handleStatusChange('leave')}
-          className={`p-4 border border-app rounded-xl hover:bg-muted transition-all duration-200 text-center group ${
-            selectedStatus === 'leave' ? 'bg-muted' : ''
-          }`}
-        >
-          <div className="text-2xl mb-2 group-hover:scale-110 transition-transform">🌴</div>
-          <div className="text-sm font-medium text-app">Leave</div>
-        </button>
-      </div>
     </div>
   );
 }
